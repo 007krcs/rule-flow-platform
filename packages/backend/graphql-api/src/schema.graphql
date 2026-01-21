@@ -1,0 +1,397 @@
+"""
+Rule Flow Platform - GraphQL Schema
+Enterprise-grade API with real-time subscriptions
+"""
+
+type Query {
+  # Rulesets
+  rulesets(filter: RulesetFilter, pagination: PaginationInput): RulesetConnection!
+  ruleset(id: ID!): Ruleset
+  
+  # Rules
+  rules(rulesetId: ID!, filter: RuleFilter): [Rule!]!
+  rule(rulesetId: ID!, ruleId: ID!): Rule
+  
+  # Execution
+  executeRules(input: ExecuteRulesInput!): ExecutionResult!
+  executionHistory(filter: ExecutionHistoryFilter, pagination: PaginationInput): ExecutionHistoryConnection!
+  
+  # Analytics
+  rulesetAnalytics(rulesetId: ID!, timeRange: TimeRange!): RulesetAnalytics!
+  performanceMetrics(timeRange: TimeRange!): PerformanceMetrics!
+  
+  # Search
+  searchRules(query: String!, filters: SearchFilters): SearchResults!
+}
+
+type Mutation {
+  # Ruleset mutations
+  createRuleset(input: CreateRulesetInput!): Ruleset!
+  updateRuleset(id: ID!, input: UpdateRulesetInput!): Ruleset!
+  deleteRuleset(id: ID!): Boolean!
+  publishRuleset(id: ID!): Ruleset!
+  
+  # Rule mutations
+  createRule(rulesetId: ID!, input: CreateRuleInput!): Rule!
+  updateRule(rulesetId: ID!, ruleId: ID!, input: UpdateRuleInput!): Rule!
+  deleteRule(rulesetId: ID!, ruleId: ID!): Boolean!
+  bulkUpdateRules(rulesetId: ID!, rules: [BulkRuleUpdate!]!): [Rule!]!
+  
+  # Execution
+  executeRulesAsync(input: ExecuteRulesInput!): ExecutionJob!
+  
+  # Collaboration
+  startCollaborationSession(rulesetId: ID!): CollaborationSession!
+  joinCollaborationSession(sessionId: ID!): CollaborationSession!
+  leaveCollaborationSession(sessionId: ID!): Boolean!
+}
+
+type Subscription {
+  # Real-time rule execution
+  ruleExecutionUpdates(rulesetId: ID!): ExecutionUpdate!
+  
+  # Collaboration
+  collaborationUpdates(sessionId: ID!): CollaborationUpdate!
+  ruleChanges(rulesetId: ID!): RuleChange!
+  
+  # System events
+  systemMetrics: SystemMetrics!
+}
+
+# Types
+type Ruleset {
+  id: ID!
+  rulesetId: String!
+  name: String!
+  version: String!
+  strategy: RuleStrategy!
+  enabled: Boolean!
+  rules: [Rule!]!
+  metadata: JSON
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  createdBy: String
+  stats: RulesetStats
+}
+
+type Rule {
+  id: ID!
+  ruleId: String!
+  name: String!
+  description: String
+  version: String!
+  enabled: Boolean!
+  scope: JSON
+  when: JSON!
+  then: [JSON!]!
+  priority: Int!
+  stopOnMatch: Boolean
+  tags: [String!]
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  executionCount: Int
+  lastExecuted: DateTime
+}
+
+type ExecutionResult {
+  success: Boolean!
+  data: JSON!
+  metadata: ExecutionMetadata!
+  errors: [ExecutionError!]
+}
+
+type ExecutionMetadata {
+  rulesMatched: [String!]!
+  executionTimeMs: Int!
+  correlationId: String!
+  rulesetVersion: String!
+}
+
+type ExecutionError {
+  message: String!
+  code: String!
+  field: String
+}
+
+type RulesetAnalytics {
+  totalExecutions: Int!
+  successRate: Float!
+  averageExecutionTime: Float!
+  rulesMatchedDistribution: [RuleMatchCount!]!
+  errorRate: Float!
+  topErrors: [ErrorCount!]!
+}
+
+type CollaborationSession {
+  id: ID!
+  rulesetId: String!
+  participants: [Participant!]!
+  startedAt: DateTime!
+  isActive: Boolean!
+}
+
+type Participant {
+  userId: String!
+  username: String!
+  joinedAt: DateTime!
+  cursor: CursorPosition
+}
+
+type CollaborationUpdate {
+  type: CollaborationEventType!
+  userId: String!
+  username: String!
+  data: JSON
+  timestamp: DateTime!
+}
+
+type RuleChange {
+  changeType: ChangeType!
+  ruleId: String!
+  rule: Rule
+  changedBy: String!
+  timestamp: DateTime!
+}
+
+type ExecutionUpdate {
+  type: ExecutionUpdateType!
+  executionId: String!
+  rulesetId: String!
+  status: String!
+  matchedRules: [String!]
+  errors: [ExecutionError!]
+  timestamp: DateTime!
+}
+
+enum ExecutionUpdateType {
+  STARTED
+  COMPLETED
+  FAILED
+  RULE_MATCHED
+}
+
+# Inputs
+input CreateRulesetInput {
+  rulesetId: String!
+  name: String!
+  version: String!
+  strategy: RuleStrategy!
+  metadata: JSON
+}
+
+input UpdateRulesetInput {
+  name: String
+  version: String
+  strategy: RuleStrategy
+  enabled: Boolean
+  metadata: JSON
+}
+
+input CreateRuleInput {
+  ruleId: String!
+  name: String!
+  description: String
+  when: JSON!
+  then: [JSON!]!
+  scope: JSON
+  priority: Int!
+  stopOnMatch: Boolean
+  tags: [String!]
+}
+
+input UpdateRuleInput {
+  name: String
+  description: String
+  when: JSON
+  then: [JSON!]
+  scope: JSON
+  priority: Int
+  enabled: Boolean
+  stopOnMatch: Boolean
+  tags: [String!]
+}
+
+input ExecuteRulesInput {
+  rulesetId: String!
+  context: ExecutionContextInput!
+  data: JSON
+}
+
+input ExecutionContextInput {
+  userRole: String!
+  country: String!
+  programId: String
+  issuerId: String
+  correlationId: String
+  locale: String
+  permissions: [String!]
+}
+
+input RulesetFilter {
+  enabled: Boolean
+  search: String
+  tags: [String!]
+}
+
+input RuleFilter {
+  enabled: Boolean
+  search: String
+  tags: [String!]
+  priority: Int
+}
+
+input ExecutionHistoryFilter {
+  success: Boolean
+  rulesetId: String
+  correlationId: String
+  from: DateTime
+  to: DateTime
+}
+
+input PaginationInput {
+  page: Int = 1
+  pageSize: Int = 20
+}
+
+input TimeRange {
+  from: DateTime!
+  to: DateTime!
+}
+
+# Enums
+enum RuleStrategy {
+  FIRST_MATCH
+  ALL
+  PRIORITY_ORDER
+}
+
+enum CollaborationEventType {
+  USER_JOINED
+  USER_LEFT
+  CURSOR_MOVED
+  RULE_EDITED
+  RULE_CREATED
+  RULE_DELETED
+}
+
+enum ChangeType {
+  CREATED
+  UPDATED
+  DELETED
+}
+
+# Scalars
+scalar DateTime
+scalar JSON
+
+# Pagination
+type RulesetConnection {
+  edges: [RulesetEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type RulesetEdge {
+  node: Ruleset!
+  cursor: String!
+}
+
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+  endCursor: String
+}
+
+type ExecutionHistoryConnection {
+  edges: [ExecutionHistoryEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type ExecutionHistoryEdge {
+  node: ExecutionHistory!
+  cursor: String!
+}
+
+type ExecutionHistory {
+  id: ID!
+  rulesetId: String!
+  correlationId: String!
+  executionTimeMs: Int!
+  rulesMatched: [String!]!
+  success: Boolean!
+  createdAt: DateTime!
+}
+
+# Analytics
+type RuleMatchCount {
+  ruleId: String!
+  ruleName: String!
+  count: Int!
+}
+
+type ErrorCount {
+  error: String!
+  count: Int!
+}
+
+type PerformanceMetrics {
+  averageExecutionTime: Float!
+  p95ExecutionTime: Float!
+  p99ExecutionTime: Float!
+  requestsPerSecond: Float!
+  errorRate: Float!
+}
+
+type RulesetStats {
+  totalRules: Int!
+  enabledRules: Int!
+  totalExecutions: Int!
+  lastExecuted: DateTime
+}
+
+type SearchResults {
+  rules: [Rule!]!
+  rulesets: [Ruleset!]!
+  totalCount: Int!
+}
+
+input SearchFilters {
+  rulesetIds: [String!]
+  tags: [String!]
+  enabled: Boolean
+}
+
+type ExecutionJob {
+  id: ID!
+  status: JobStatus!
+  rulesetId: String!
+  createdAt: DateTime!
+}
+
+enum JobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+input BulkRuleUpdate {
+  ruleId: String!
+  updates: UpdateRuleInput!
+}
+
+type CursorPosition {
+  x: Float!
+  y: Float!
+  ruleId: String
+}
+
+type SystemMetrics {
+  cpu: Float!
+  memory: Float!
+  activeConnections: Int!
+  requestsPerSecond: Float!
+  timestamp: DateTime!
+}

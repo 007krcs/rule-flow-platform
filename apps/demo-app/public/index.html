@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rule Flow Platform - Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-purple-500 to-pink-500 min-h-screen p-8">
+    <div class="max-w-6xl mx-auto">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 mb-8">
+            <h1 class="text-4xl font-bold text-gray-900 mb-4">
+                🚀 Rule Flow Platform - Demo Application
+            </h1>
+            <p class="text-gray-600 text-lg">
+                Complete, production-ready rule engine platform
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h2 class="text-2xl font-bold mb-4">🎨 Frontend Apps</h2>
+                <div class="space-y-3">
+                    <a href="http://localhost:3010" class="block p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition">
+                        <div class="font-semibold text-blue-900">Rule Editor UI</div>
+                        <div class="text-sm text-blue-700">Port 3010 - Create & manage rules</div>
+                    </a>
+                    <a href="http://localhost:3011" class="block p-4 bg-green-50 rounded-lg hover:bg-green-100 transition">
+                        <div class="font-semibold text-green-900">Runtime App</div>
+                        <div class="text-sm text-green-700">Port 3011 - Execute rules</div>
+                    </a>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h2 class="text-2xl font-bold mb-4">⚙️ Backend Services</h2>
+                <div class="space-y-3">
+                    <div class="p-4 bg-purple-50 rounded-lg">
+                        <div class="font-semibold text-purple-900">Rule Engine API</div>
+                        <div class="text-sm text-purple-700">Port 3001</div>
+                    </div>
+                    <div class="p-4 bg-indigo-50 rounded-lg">
+                        <div class="font-semibold text-indigo-900">Config Service</div>
+                        <div class="text-sm text-indigo-700">Port 3002</div>
+                    </div>
+                    <div class="p-4 bg-pink-50 rounded-lg">
+                        <div class="font-semibold text-pink-900">Gateway Service</div>
+                        <div class="text-sm text-pink-700">Port 3003</div>
+                    </div>
+                    <div class="p-4 bg-yellow-50 rounded-lg">
+                        <div class="font-semibold text-yellow-900">Editor API</div>
+                        <div class="text-sm text-yellow-700">Port 3004</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg p-8 mt-8">
+            <h2 class="text-2xl font-bold mb-6">📚 Quick Start Code</h2>
+            <div class="bg-gray-900 text-green-400 p-6 rounded-lg overflow-x-auto">
+                <pre><code>// Install SDK
+npm install @ruleflow/sdk
+
+// Use SDK
+import { createRuleFlowSDK } from '@ruleflow/sdk';
+
+const sdk = createRuleFlowSDK({
+  apiUrl: 'http://localhost:3003'
+});
+
+// Execute rules
+const result = await sdk.executeRules({
+  ruleSetId: 'PECULIARITY_RULES_DE_FR',
+  context: {
+    userRole: 'ADMIN',
+    country: 'DE',
+    programId: '123',
+    issuerId: 'ISSUER_001'
+  },
+  data: {
+    currency: 'EUR',
+    amount: 15000
+  }
+});
+
+console.log(result.data); // { paymentTerm: 30, ... }
+</code></pre>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

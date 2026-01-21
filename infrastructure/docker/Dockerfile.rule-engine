@@ -1,0 +1,35 @@
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Copy workspace files
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY packages/backend/rule-engine/package.json ./packages/backend/rule-engine/
+COPY packages/backend/shared/package.json ./packages/backend/shared/
+
+# Install dependencies
+RUN npm install -g pnpm@8
+RUN pnpm install --frozen-lockfile
+
+# Copy source code
+COPY packages/backend/rule-engine ./packages/backend/rule-engine
+COPY packages/backend/shared ./packages/backend/shared
+
+# Build
+RUN cd packages/backend/rule-engine && pnpm build
+
+# Production image
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy built files
+COPY --from=builder /app/packages/backend/rule-engine/dist ./dist
+COPY --from=builder /app/packages/backend/rule-engine/package.json ./
+
+# Install production dependencies only
+RUN npm install --production
+
+EXPOSE 3001
+
+CMD ["node", "dist/server.js"]

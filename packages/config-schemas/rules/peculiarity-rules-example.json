@@ -1,0 +1,283 @@
+{
+  "$schema": "./schema/ruleset-schema.json",
+  "ruleSetId": "PECULIARITY_RULES_DE_FR",
+  "name": "Peculiarity Rules for Germany and France",
+  "description": "Business rules for trade peculiarity processing - matching architecture diagram",
+  "version": "1.0.0",
+  "strategy": "all",
+  "country": ["DE", "FR"],
+  "programId": ["123", "456"],
+  "rules": [
+    {
+      "ruleId": "PAYMENT_TERM_EUR_HIGH_AMOUNT",
+      "name": "Payment Term for High EUR Amounts",
+      "description": "Set payment term to 30 days for EUR transactions over 10,000",
+      "version": "1.0",
+      "enabled": true,
+      "scope": {
+        "country": ["DE", "FR"],
+        "programId": ["123"],
+        "role": ["ADMIN", "OPS", "TRADER"]
+      },
+      "when": {
+        "all": [
+          {
+            "field": "currency",
+            "op": "eq",
+            "value": "EUR"
+          },
+          {
+            "field": "amount",
+            "op": "gt",
+            "value": 10000
+          }
+        ]
+      },
+      "then": [
+        {
+          "type": "set",
+          "field": "paymentTerm",
+          "value": 30
+        },
+        {
+          "type": "set",
+          "field": "peculiarity.paymentTermReason",
+          "value": "High amount EUR transaction"
+        }
+      ],
+      "priority": 10,
+      "tags": ["payment", "peculiarity", "EUR"]
+    },
+    {
+      "ruleId": "SETTLEMENT_DATE_WEEKEND",
+      "name": "Adjust Settlement for Weekend",
+      "description": "Move settlement to next business day if falls on weekend",
+      "version": "1.0",
+      "enabled": true,
+      "scope": {
+        "country": ["DE", "FR"]
+      },
+      "when": {
+        "any": [
+          {
+            "field": "settlementDay",
+            "op": "eq",
+            "value": "SATURDAY"
+          },
+          {
+            "field": "settlementDay",
+            "op": "eq",
+            "value": "SUNDAY"
+          }
+        ]
+      },
+      "then": [
+        {
+          "type": "calculate",
+          "field": "settlementDate",
+          "expression": "settlementDate + (settlementDay == 'SATURDAY' ? 2 : 1)"
+        },
+        {
+          "type": "set",
+          "field": "peculiarity.settlementAdjusted",
+          "value": true
+        }
+      ],
+      "priority": 20
+    },
+    {
+      "ruleId": "CREDIT_CHECK_HIGH_RISK",
+      "name": "Credit Check for High Risk",
+      "description": "Require manual approval for high risk customers",
+      "version": "1.0",
+      "enabled": true,
+      "scope": {
+        "country": ["DE", "FR"],
+        "role": ["ADMIN", "RISK_MANAGER"]
+      },
+      "when": {
+        "any": [
+          {
+            "field": "riskScore",
+            "op": "gt",
+            "value": 80
+          },
+          {
+            "all": [
+              {
+                "field": "amount",
+                "op": "gt",
+                "value": 50000
+              },
+              {
+                "field": "customerType",
+                "op": "eq",
+                "value": "NEW"
+              }
+            ]
+          }
+        ]
+      },
+      "then": [
+        {
+          "type": "set",
+          "field": "requiresApproval",
+          "value": true
+        },
+        {
+          "type": "set",
+          "field": "approvalLevel",
+          "value": "SENIOR_RISK_MANAGER"
+        },
+        {
+          "type": "set",
+          "field": "peculiarity.creditCheckRequired",
+          "value": true
+        },
+        {
+          "type": "append",
+          "field": "flags",
+          "value": "HIGH_RISK"
+        }
+      ],
+      "priority": 30,
+      "stopOnMatch": false
+    },
+    {
+      "ruleId": "COMPLIANCE_CHECK_LARGE_TRADE",
+      "name": "Compliance Check for Large Trades",
+      "description": "Flag large trades for compliance review",
+      "version": "1.0",
+      "enabled": true,
+      "scope": {
+        "country": ["DE", "FR"]
+      },
+      "when": {
+        "any": [
+          {
+            "field": "amount",
+            "op": "gte",
+            "value": 100000
+          },
+          {
+            "all": [
+              {
+                "field": "country",
+                "op": "in",
+                "value": ["CH", "LI", "LU"]
+              },
+              {
+                "field": "amount",
+                "op": "gte",
+                "value": 50000
+              }
+            ]
+          }
+        ]
+      },
+      "then": [
+        {
+          "type": "set",
+          "field": "complianceReviewRequired",
+          "value": true
+        },
+        {
+          "type": "set",
+          "field": "peculiarity.complianceReason",
+          "value": "Large trade amount"
+        },
+        {
+          "type": "append",
+          "field": "flags",
+          "value": "COMPLIANCE_REVIEW"
+        }
+      ],
+      "priority": 25
+    },
+    {
+      "ruleId": "ISSUER_SPECIFIC_PECULIARITY",
+      "name": "Issuer Specific Peculiarity Rules",
+      "description": "Apply issuer-specific peculiarity logic",
+      "version": "1.0",
+      "enabled": true,
+      "scope": {
+        "issuerId": ["ISSUER_001", "ISSUER_002"],
+        "programId": ["123"]
+      },
+      "when": {
+        "all": [
+          {
+            "field": "context.issuerId",
+            "op": "in",
+            "value": ["ISSUER_001", "ISSUER_002"]
+          },
+          {
+            "field": "tradeType",
+            "op": "eq",
+            "value": "DERIVATIVE"
+          }
+        ]
+      },
+      "then": [
+        {
+          "type": "set",
+          "field": "peculiarity.issuerSpecific",
+          "value": true
+        },
+        {
+          "type": "calculate",
+          "field": "peculiarity.customFee",
+          "expression": "amount * 0.001"
+        },
+        {
+          "type": "set",
+          "field": "peculiarity.feeType",
+          "value": "DERIVATIVE_FEE"
+        }
+      ],
+      "priority": 15
+    },
+    {
+      "ruleId": "CURRENCY_CONVERSION_REQUIRED",
+      "name": "Currency Conversion Check",
+      "description": "Flag trades requiring currency conversion",
+      "version": "1.0",
+      "enabled": true,
+      "when": {
+        "all": [
+          {
+            "field": "currency",
+            "op": "ne",
+            "value": "EUR"
+          },
+          {
+            "field": "settlementCurrency",
+            "op": "eq",
+            "value": "EUR"
+          }
+        ]
+      },
+      "then": [
+        {
+          "type": "set",
+          "field": "requiresCurrencyConversion",
+          "value": true
+        },
+        {
+          "type": "set",
+          "field": "peculiarity.conversionPair",
+          "expression": "currency + '/EUR'"
+        }
+      ],
+      "priority": 5
+    }
+  ],
+  "metadata": {
+    "createdBy": "system",
+    "createdAt": "2024-01-15T10:00:00Z",
+    "updatedBy": "admin@company.com",
+    "updatedAt": "2024-01-19T14:30:00Z",
+    "environment": "production",
+    "approvedBy": "risk-committee"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "name": "@ruleflow/sdk",
+  "version": "1.0.0",
+  "description": "JavaScript SDK for integrating Rule Flow Platform",
+  "main": "dist/index.js",
+  "module": "dist/index.esm.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "rollup -c",
+    "dev": "rollup -c -w",
+    "test": "vitest",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": ["rules", "workflow", "sdk"],
+  "dependencies": {
+    "axios": "^1.6.2"
+  },
+  "devDependencies": {
+    "@rollup/plugin-typescript": "^11.1.5",
+    "rollup": "^4.9.1",
+    "typescript": "^5.3.3",
+    "vitest": "^1.1.0"
+  }
+}

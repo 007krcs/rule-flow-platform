@@ -1,0 +1,12 @@
+{
+  "name": "@ruleflow/demo-app",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "serve public -p 5173",
+    "build": "echo 'Static HTML - no build needed'",
+    "preview": "serve public -p 5173"
+  },
+  "devDependencies": {
+    "serve": "^14.2.1"
+  }
+}

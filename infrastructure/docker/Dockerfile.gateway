@@ -1,0 +1,23 @@
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY packages/backend/gateway-service/package.json ./packages/backend/gateway-service/
+COPY packages/backend/shared/package.json ./packages/backend/shared/
+
+RUN npm install -g pnpm@8
+RUN pnpm install --frozen-lockfile
+
+COPY packages/backend/gateway-service ./packages/backend/gateway-service
+COPY packages/backend/shared ./packages/backend/shared
+
+RUN cd packages/backend/gateway-service && pnpm build
+
+FROM node:20-alpine
+WORKDIR /app
+COPY --from=builder /app/packages/backend/gateway-service/dist ./dist
+COPY --from=builder /app/packages/backend/gateway-service/package.json ./
+RUN npm install --production
+
+EXPOSE 3003
+CMD ["node", "dist/server.js"]

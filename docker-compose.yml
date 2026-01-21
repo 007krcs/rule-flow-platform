@@ -1,0 +1,167 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: ruleflow-postgres
+    environment:
+      POSTGRES_DB: ruleflow
+      POSTGRES_USER: ruleflow
+      POSTGRES_PASSWORD: ruleflow_dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/docker/init-db.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ruleflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: ruleflow-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Rule Engine API
+  rule-engine:
+    build:
+      context: ./packages/backend/rule-engine
+      dockerfile: Dockerfile
+    container_name: ruleflow-rule-engine
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      DATABASE_URL: postgresql://ruleflow:ruleflow_dev_password@postgres:5432/ruleflow
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./packages/backend/rule-engine:/app
+      - /app/node_modules
+
+  # Config Service
+  config-service:
+    build:
+      context: ./packages/backend/config-service
+      dockerfile: Dockerfile
+    container_name: ruleflow-config-service
+    environment:
+      NODE_ENV: development
+      PORT: 3002
+      DATABASE_URL: postgresql://ruleflow:ruleflow_dev_password@postgres:5432/ruleflow
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "3002:3002"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./packages/backend/config-service:/app
+      - /app/node_modules
+
+  # Gateway Service (Peculiarity Execution Gateway)
+  gateway-service:
+    build:
+      context: ./packages/backend/gateway-service
+      dockerfile: Dockerfile
+    container_name: ruleflow-gateway
+    environment:
+      NODE_ENV: development
+      PORT: 3003
+      DATABASE_URL: postgresql://ruleflow:ruleflow_dev_password@postgres:5432/ruleflow
+      REDIS_URL: redis://redis:6379
+      RULE_ENGINE_URL: http://rule-engine:3001
+    ports:
+      - "3003:3003"
+    depends_on:
+      - rule-engine
+      - postgres
+      - redis
+    volumes:
+      - ./packages/backend/gateway-service:/app
+      - /app/node_modules
+
+  # Editor API
+  editor-api:
+    build:
+      context: ./packages/backend/editor-api
+      dockerfile: Dockerfile
+    container_name: ruleflow-editor-api
+    environment:
+      NODE_ENV: development
+      PORT: 3004
+      DATABASE_URL: postgresql://ruleflow:ruleflow_dev_password@postgres:5432/ruleflow
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "3004:3004"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./packages/backend/editor-api:/app
+      - /app/node_modules
+
+  # Rule Editor UI
+  rule-editor-ui:
+    build:
+      context: ./packages/frontend/rule-editor-ui
+      dockerfile: Dockerfile
+    container_name: ruleflow-editor-ui
+    environment:
+      NODE_ENV: development
+      PORT: 3010
+      NEXT_PUBLIC_API_URL: http://localhost:3004
+    ports:
+      - "3010:3010"
+    depends_on:
+      - editor-api
+    volumes:
+      - ./packages/frontend/rule-editor-ui:/app
+      - /app/node_modules
+      - /app/.next
+
+  # Runtime App
+  runtime-app:
+    build:
+      context: ./packages/frontend/runtime-app
+      dockerfile: Dockerfile
+    container_name: ruleflow-runtime-app
+    environment:
+      NODE_ENV: development
+      PORT: 3011
+      NEXT_PUBLIC_API_URL: http://localhost:3003
+    ports:
+      - "3011:3011"
+    depends_on:
+      - gateway-service
+    volumes:
+      - ./packages/frontend/runtime-app:/app
+      - /app/node_modules
+      - /app/.next
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  default:
+    name: ruleflow-network
